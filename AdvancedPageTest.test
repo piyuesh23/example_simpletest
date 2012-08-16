@@ -25,8 +25,8 @@ class AdvancedPageTest extends DrupalWebTestCase {
    * Test if the content type is created properly on install
    */
   function test_bundle() {
-    $bundles = field_info_bundles();
-    foreach($bundles as $bundle) {
-
+    $bundles = field_info_bundles('node');
+    if(array_key_exists('advanced_page', $bundles)) {
+      $this->assertTrue('Advanced page content type exists.');
     }
   }
