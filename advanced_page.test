@@ -1,0 +1,64 @@
+<?php
+/**
+ * @file
+ * Advanced page test
+ *
+ * Copyright (c) 2010-2011 Board of Trustees, Leland Stanford Jr. University
+ * This software is open-source licensed under the GNU Public License Version 2 or later
+ * The full license is available in the LICENSE.TXT file at the root of this repository
+ */
+class AdvancedPageTest extends DrupalWebTestCase {
+
+  function setUp() {
+    parent::setUp('advanced_page');
+    $this->admin_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list'));
+    $this->any_user = $this->drupalCreateUser();
+  }
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Advanced Page functionality',
+      'description' => 'Testing core functionality for advanced page',
+      'group' => 'Advanced Page'
+    );
+  }
+
+  /**
+   * Test if the content type is created properly on install
+   */
+  function test_bundle() {
+    $bundles = field_info_bundles('node');
+    if(array_key_exists('advanced_page', $bundles)) {
+      $this->assertTrue('Advanced page content type exists.');
+    }
+  }
+
+  /**
+   * Test if an anonymous/admin user can access the listing and settings page
+   */
+  function test_access() {
+    $this->drupalLogin($this->any_user);
+    $this->drupalGet('admin/config/system/advanced-page/settings');
+    $this->assertResponse(403);
+    $this->assertTrue(t('Anonymous user cannot access advanced page settings.'));
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(200);
+    $this->assertTrue(t('Admin user can access advanced page list.'));
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/config/system/advanced-page/settings');
+    $this->assertResponse(200);
+    $this->assertTrue(t('Admin user can access advanced page settings.'));
+  }
+
+  /**
+   * Test if admin user can edit advanced pages
+   */
+  function test_editaccess() {
+    $this->drupalLogin($this->admin_user);
+    $node1 = $this->drupalCreateNode(array('type' => 'advanced_page', 'title' => 'testing advanced_page', 'nid' => 1));
+    $this->drupalGet('node/1/edit');
+    $this->assertResponse(200);
+    $this->assertTrue("Admin can edit advanced pages.");
+  }
+}
