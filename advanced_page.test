@@ -7,6 +7,66 @@
  * This software is open-source licensed under the GNU Public License Version 2 or later
  * The full license is available in the LICENSE.TXT file at the root of this repository
  */
+class AdvancedPageModuleInstallTest extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Advanced Page Module Installation Test',
+      'description' => 'Testing test cases for module install and uninstall',
+      'group' => 'Advanced Page'
+    );
+  }
+  function testDependencyResolution() {
+    module_enable(array('advanced_page'));
+    module_disable(array('ctools'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on ctools'));
+    module_enable(array('advanced_page'));
+    module_disable(array('features'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on features'));
+    module_enable(array('advanced_page'));
+    module_disable(array('field_group'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on field_group'));
+    module_enable(array('advanced_page'));
+    module_disable(array('file'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on file'));
+    module_enable(array('advanced_page'));
+    module_disable(array('filefield_paths'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on filefield_paths'));
+    module_enable(array('advanced_page'));
+    module_disable(array('path'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on path'));
+    module_enable(array('advanced_page'));
+    module_disable(array('php'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on php'));
+    module_enable(array('advanced_page'));
+    module_disable(array('views'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on views'));
+    module_enable(array('advanced_page'));
+    module_disable(array('views_ui'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on views_ui'));
+  }
+
+  function testUserPermsInstalled() {
+    module_enable(array('advanced_page'));
+    $permission = array();
+    $permission = module_invoke('advanced_page', 'permission');
+    foreach ($permission as $key => $value) {
+      $this->assertTrue('Permission for '.$key.' Exists');
+    }
+  }
+
+  function testModuleUninstalled() {
+    module_disable(array('advanced_page'));
+    drupal_uninstall_modules(array('advanced_page'));
+    $count = db_query("SELECT COUNT(rid) FROM {role_permission} WHERE permission = :perm", array(':perm' => 'advanced_page perm'))->fetchField();
+    $this->assertEqual(0, $count, t('Permissions were all removed.'));
+
+    $bundles = field_info_bundles('node');
+    if(!array_key_exists('advanced_page', $bundles)) {
+      $this->assertTrue('Advanced page content type removed on uninstallation.');
+    }
+  }
+}
+
 class AdvancedPageTest extends DrupalWebTestCase {
 
   function setUp() {
