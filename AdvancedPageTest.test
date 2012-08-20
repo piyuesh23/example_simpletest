@@ -11,6 +11,11 @@ class AdvancedPageTest extends DrupalWebTestCase {
 
   function setUp() {
     parent::setUp('advanced_page');
+
+    $this->own_user = $this->drupalCreateUser(array('create advanced_page content', 'edit own advanced_page content', 'delete own advanced_page content'));
+
+    $this->OnlyViewList_user = $this->drupalCreateUser(array('view advanced page list'));
+    $this->auntenticate_user = $this->drupalCreateUser();
   }
 
   public static function getInfo() {
@@ -30,3 +35,27 @@ class AdvancedPageTest extends DrupalWebTestCase {
       $this->assertTrue('Advanced page content type exists.');
     }
   }
+
+  /**
+   * Tests the permissions bases listing page
+   */
+  function test_ViewAdvancePageList() {
+
+    // testing for authenticate user
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(403, t('Advanced page list is not accessible to anonymous user.'));
+    $this->drupalLogout();
+
+    // testing for authenticate user
+    $this->drupalLogin($this->auntenticate_user);
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(403, t('Advanced page list is not accessible to auntenticate user without !perm.', array('!perm' => 'view advanced page list')));
+    $this->drupalLogout();
+
+    // testing with the users has the permission 'view advanced page list'
+    $this->drupalLogin($this->OnlyViewList_user);
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(200, t('Advanced page list was displayed.'));
+    $this->drupalLogout();
+  }
+}
