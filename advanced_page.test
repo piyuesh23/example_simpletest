@@ -13,6 +13,8 @@ class AdvancedPageTest extends DrupalWebTestCase {
     parent::setUp('advanced_page');
     $this->admin_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list'));
     $this->any_user = $this->drupalCreateUser();
+    $this->OnlyViewList_user = $this->drupalCreateUser(array('view advanced page list'));
+    $this->own_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list', 'create advanced_page content', 'edit own advanced_page content', 'delete own advanced_page content'));
   }
 
   public static function getInfo() {
@@ -37,28 +39,66 @@ class AdvancedPageTest extends DrupalWebTestCase {
    * Test if an anonymous/admin user can access the listing and settings page
    */
   function test_access() {
+
     $this->drupalLogin($this->any_user);
     $this->drupalGet('admin/config/system/advanced-page/settings');
     $this->assertResponse(403);
     $this->assertTrue(t('Anonymous user cannot access advanced page settings.'));
+    $this->drupalLogout();
+
     $this->drupalLogin($this->admin_user);
     $this->drupalGet('admin/config/system/advanced-page');
     $this->assertResponse(200);
     $this->assertTrue(t('Admin user can access advanced page list.'));
+    $this->drupalLogout();
+
     $this->drupalLogin($this->admin_user);
     $this->drupalGet('admin/config/system/advanced-page/settings');
     $this->assertResponse(200);
     $this->assertTrue(t('Admin user can access advanced page settings.'));
+    $this->drupalLogout();
+
+    // testing with the users has the permission 'view advanced page list'
+    $this->drupalLogin($this->OnlyViewList_user);
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(200, t('Advanced page list was displayed.'));
+    $this->drupalLogout();
+
+    // testing for Anonymous user
+    $this->drupalGet('admin/config/system/advanced-page');
+    $this->assertResponse(403, t('Advanced page list is not accessible to anonymous user.'));
   }
 
   /**
    * Test if admin user can edit advanced pages
    */
   function test_editaccess() {
+    // create a page using own user
+    $this->drupalLogin($this->own_user);
+    $node_details = array(
+      'type' => 'advanced_page',
+      'title' => 'testing advanced page',
+      'field_advanced_page_status' => array(
+          'und' => array(
+            0 => array(
+              'value' => 1,
+              )
+            ),
+        ),
+      );
+
+    $node = $this->drupalCreateNode($node_details);
+    $this->assertTrue($node->nid, t("!title created by @name", array('!title' => $node->title, '@name' => format_username($this->own_user))));
+    $this->drupalLogout();
+
+    // Authenticate user without edit permission
     $this->drupalLogin($this->admin_user);
-    $node1 = $this->drupalCreateNode(array('type' => 'advanced_page', 'title' => 'testing advanced_page', 'nid' => 1));
-    $this->drupalGet('node/1/edit');
-    $this->assertResponse(200);
-    $this->assertTrue("Admin can edit advanced pages.");
+    $this->drupalGet('node/' . $node->nid . '/edit');
+    $this->assertResponse(403, "Authenticate user can not edit advanced pages.");
+    $this->drupalLogout();
+
+    // Anonymous page
+    $this->drupalGet('node/' . $node->nid . '/edit');
+    $this->assertResponse(403, "Anonymous user can not edit advanced pages.");
   }
 }
