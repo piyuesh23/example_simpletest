@@ -75,6 +75,7 @@ class AdvancedPageTest extends DrupalWebTestCase {
     $this->any_user = $this->drupalCreateUser();
     $this->OnlyViewList_user = $this->drupalCreateUser(array('view advanced page list'));
     $this->own_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list', 'create advanced_page content', 'edit own advanced_page content', 'delete own advanced_page content'));
+    $this->privileged_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list','create advanced_page content'));
   }
 
   public static function getInfo() {
@@ -127,6 +128,10 @@ class AdvancedPageTest extends DrupalWebTestCase {
     // testing for Anonymous user
     $this->drupalGet('admin/config/system/advanced-page');
     $this->assertResponse(403, t('Advanced page list is not accessible to anonymous user.'));
+
+    $this->drupalGet('node/add/advanced-page');
+    $this->assertResponse(403, t('Anonymous user can not post Advanced page content.'));
+
   }
 
   /**
@@ -161,4 +166,52 @@ class AdvancedPageTest extends DrupalWebTestCase {
     $this->drupalGet('node/' . $node->nid . '/edit');
     $this->assertResponse(403, "Anonymous user can not edit advanced pages.");
   }
+
+  function test_advanced_page_settings() {
+
+    $this->drupalLogin($this->privileged_user);
+    $post = array();
+    $post['advanced_page_url'] = 1;
+    $post['advanced_page_url_alias'] = '';
+    $post['advanced_page_javascript_field'] = 1;
+    $post['advanced_page_css_field'] = 1;
+    $post['advanced_page_file_upload_field'] = 1;
+    $post['advanced_page_allowed_ext'] = 'gif png jpg jpeg txt';
+    $post['advanced_page_menu'] = 1;
+    $post['form_id'] = 'advanced_page_settings_form';
+
+    $this->drupalPost('admin/config/system/advanced-page/settings', $post, t('Save configuration'));
+
+    $advanced_page_url                = $this->assertFieldChecked('edit-advanced-page-url');
+    // $advanced_page_url_alias = $this->assertFieldChecked('edit-advanced-page-url-alias');
+    $advanced_page_javascript_field   = $this->assertFieldChecked('edit-advanced-page-javascript-field');
+    $advanced_page_css_field          = $this->assertFieldChecked('edit-advanced-page-css-field');
+    $advanced_page_file_upload_field  = $this->assertFieldChecked('edit-advanced-page-file-upload-field');
+    if ($advanced_page_file_upload_field) {
+      $this->assertFieldById('edit-advanced-page-allowed-ext', 'gif png jpg jpeg txt', "Given Values are matched");
+    }
+    // $this->assertFieldChecked('edit-advanced-page-allowed-ext');
+    $advanced_page_menu               = $this->assertFieldChecked('edit-advanced-page-menu');
+
+    $this->drupalGet('node/add/advanced-page');
+    if ($advanced_page_url) {
+      // $this->assertFieldById('edit-advanced-page-path', '', "URL path settings is available");
+      $this->assertFieldById('edit-advanced-page-path-alias', '', "URL path settings is available");
+    }
+
+    if ($advanced_page_javascript_field) {
+      $this->assertFieldById('edit-field-advanced-page-attach-js-und-0-upload', '', "JS uoload field is available");
+    }
+
+    if ($advanced_page_css_field) {
+      $this->assertFieldById('edit-field-advanced-page-attach-css-und-0-upload', '', "CSS uoload field is available");
+    }
+
+    if ($advanced_page_menu) {
+      $this->assertFieldById('edit-menu-enabled', '', "Menu setting is available");
+    }
+
+    $this->drupalLogout();
+  }
+
 }
