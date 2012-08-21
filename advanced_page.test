@@ -7,6 +7,66 @@
  * This software is open-source licensed under the GNU Public License Version 2 or later
  * The full license is available in the LICENSE.TXT file at the root of this repository
  */
+class AdvancedPageModuleInstallTest extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Advanced Page Module Installation Test',
+      'description' => 'Testing test cases for module install and uninstall',
+      'group' => 'Advanced Page'
+    );
+  }
+  function testDependencyResolution() {
+    module_enable(array('advanced_page'));
+    module_disable(array('ctools'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on ctools'));
+    module_enable(array('advanced_page'));
+    module_disable(array('features'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on features'));
+    module_enable(array('advanced_page'));
+    module_disable(array('field_group'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on field_group'));
+    module_enable(array('advanced_page'));
+    module_disable(array('file'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on file'));
+    module_enable(array('advanced_page'));
+    module_disable(array('filefield_paths'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on filefield_paths'));
+    module_enable(array('advanced_page'));
+    module_disable(array('path'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on path'));
+    module_enable(array('advanced_page'));
+    module_disable(array('php'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on php'));
+    module_enable(array('advanced_page'));
+    module_disable(array('views'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on views'));
+    module_enable(array('advanced_page'));
+    module_disable(array('views_ui'));
+    $this->assertTrue(!module_exists('advanced_page'), t('Advanced page depends on views_ui'));
+  }
+
+  function testUserPermsInstalled() {
+    module_enable(array('advanced_page'));
+    $permission = array();
+    $permission = module_invoke('advanced_page', 'permission');
+    foreach ($permission as $key => $value) {
+      $this->assertTrue('Permission for '.$key.' Exists');
+    }
+  }
+
+  function testModuleUninstalled() {
+    module_disable(array('advanced_page'));
+    drupal_uninstall_modules(array('advanced_page'));
+    $count = db_query("SELECT COUNT(rid) FROM {role_permission} WHERE permission = :perm", array(':perm' => 'advanced_page perm'))->fetchField();
+    $this->assertEqual(0, $count, t('Permissions were all removed.'));
+
+    $bundles = field_info_bundles('node');
+    if(!array_key_exists('advanced_page', $bundles)) {
+      $this->assertTrue('Advanced page content type removed on uninstallation.');
+    }
+  }
+}
+
 class AdvancedPageTest extends DrupalWebTestCase {
 
   function setUp() {
@@ -15,6 +75,7 @@ class AdvancedPageTest extends DrupalWebTestCase {
     $this->any_user = $this->drupalCreateUser();
     $this->OnlyViewList_user = $this->drupalCreateUser(array('view advanced page list'));
     $this->own_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list', 'create advanced_page content', 'edit own advanced_page content', 'delete own advanced_page content'));
+    $this->privileged_user = $this->drupalCreateUser(array('administer advanced page', 'view advanced page list','create advanced_page content'));
   }
 
   public static function getInfo() {
@@ -67,6 +128,10 @@ class AdvancedPageTest extends DrupalWebTestCase {
     // testing for Anonymous user
     $this->drupalGet('admin/config/system/advanced-page');
     $this->assertResponse(403, t('Advanced page list is not accessible to anonymous user.'));
+
+    $this->drupalGet('node/add/advanced-page');
+    $this->assertResponse(403, t('Anonymous user can not post Advanced page content.'));
+
   }
 
   /**
@@ -101,4 +166,49 @@ class AdvancedPageTest extends DrupalWebTestCase {
     $this->drupalGet('node/' . $node->nid . '/edit');
     $this->assertResponse(403, "Anonymous user can not edit advanced pages.");
   }
+
+  function test_advanced_page_settings() {
+
+    $this->drupalLogin($this->privileged_user);
+    $post = array();
+    $post['advanced_page_url'] = 1;
+    $post['advanced_page_url_alias'] = '';
+    $post['advanced_page_javascript_field'] = 1;
+    $post['advanced_page_css_field'] = 1;
+    $post['advanced_page_file_upload_field'] = 1;
+    $post['advanced_page_allowed_ext'] = 'gif png jpg jpeg txt';
+    $post['advanced_page_menu'] = 1;
+    $post['form_id'] = 'advanced_page_settings_form';
+
+    $this->drupalPost('admin/config/system/advanced-page/settings', $post, t('Save configuration'));
+
+    $advanced_page_url                = $this->assertFieldChecked('edit-advanced-page-url');
+    // $advanced_page_url_alias = $this->assertFieldChecked('edit-advanced-page-url-alias');
+    $advanced_page_javascript_field   = $this->assertFieldChecked('edit-advanced-page-javascript-field');
+    $advanced_page_css_field          = $this->assertFieldChecked('edit-advanced-page-css-field');
+    $advanced_page_file_upload_field  = $this->assertFieldChecked('edit-advanced-page-file-upload-field');
+    // $this->assertFieldChecked('edit-advanced-page-allowed-ext');
+    $advanced_page_menu               = $this->assertFieldChecked('edit-advanced-page-menu');
+
+    $this->drupalGet('node/add/advanced-page');
+    if ($advanced_page_url) {
+      // $this->assertFieldById('edit-advanced-page-path', '', "URL path settings is available");
+      $this->assertFieldById('edit-advanced-page-path-alias', '', "URL path settings is available");
+    }
+
+    if ($advanced_page_javascript_field) {
+      $this->assertFieldById('edit-field-advanced-page-attach-js-und-0-upload', '', "JS uoload field is available");
+    }
+
+    if ($advanced_page_css_field) {
+      $this->assertFieldById('edit-field-advanced-page-attach-css-und-0-upload', '', "CSS uoload field is available");
+    }
+
+    if ($advanced_page_menu) {
+      $this->assertFieldById('edit-menu-enabled', '', "Menu setting is available");
+    }
+
+    $this->drupalLogout();
+  }
+
 }
