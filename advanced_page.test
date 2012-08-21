@@ -187,6 +187,9 @@ class AdvancedPageTest extends DrupalWebTestCase {
     $advanced_page_javascript_field   = $this->assertFieldChecked('edit-advanced-page-javascript-field');
     $advanced_page_css_field          = $this->assertFieldChecked('edit-advanced-page-css-field');
     $advanced_page_file_upload_field  = $this->assertFieldChecked('edit-advanced-page-file-upload-field');
+    if ($advanced_page_file_upload_field) {
+      $this->assertFieldById('edit-advanced-page-allowed-ext', 'gif png jpg jpeg txt', "Given Values are matched");
+    }
     // $this->assertFieldChecked('edit-advanced-page-allowed-ext');
     $advanced_page_menu               = $this->assertFieldChecked('edit-advanced-page-menu');
 
